@@ -96,8 +96,8 @@ def generate_reference_xls():
             continue
 
         #test code
-        #if count > 50:
-        #     break
+        if count > 50:
+             break
 
         month = utils.last_month()
         try:
@@ -136,6 +136,11 @@ def generate_reference_xls():
             record = []
 
             date = close_price.keys()[0]
+
+            three_days_ago = 'NA'
+            if len(close_price.keys()) >= 4:
+                three_days_ago = close_price.keys()[3]
+
             open_price = history_data[u'open'][0]
             high = history_data[u'high'][0]
             low = history_data[u'low'][0]
@@ -164,6 +169,7 @@ def generate_reference_xls():
             record.append(id)
             record.append(trend)
             record.append(date)
+            record.append(three_days_ago)
             record.append(open_price)
             record.append(close_price[0])
             record.append(high)
