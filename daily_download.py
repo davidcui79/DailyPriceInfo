@@ -268,6 +268,173 @@ def download_daily_image():
             print (info[0], ':', info[1])
             continue
 
+        insert_log(LOG_FILE, 'Finished downloading jpeg files')
+
+def generate_annotations():
+    excel_fp = os.path.join(REFERENCE_DIR, 'reference_' + date + '.xls')
+    traing_data_dir = os.path.join(REFERENCE_DIR, 'training_data')
+    if os.path.exists(traing_data_dir):
+        shutil.rmtree(traing_data_dir)
+    os.mkdir(traing_data_dir)
+    insert_log(LOG_FILE, 'create dir ' + traing_data_dir)
+
+    IMAGE_directory = os.path.join(traing_data_dir, 'JPEGImages')
+    insert_log(LOG_FILE, 'create dir ' + IMAGE_directory)
+
+    annotation_directory = os.path.join(traing_data_dir, 'annotations')
+    insert_log(LOG_FILE, 'create dir ' + annotation_directory)
+
+
+    insert_log(LOG_FILE, 'open ' + excel_fp)
+    read_workbook = xlrd.open_workbook(excel_fp)
+    read_worksheet = read_workbook.sheet_by_name('all')
+    rows = []
+    for i in range(0, read_worksheet.nrows):
+        rows.append(read_worksheet.row_values(i))
+    insert_log(LOG_FILE, 'read '+ format(len(rows),"") + 'rows from xls file')
+
+    for i in range(len(rows)):
+        trend = rows[i][1]
+        if (trend == 'up') or (trend == 'down'):
+            id = rows[i][0]
+            three_days_ago = rows[i][3]
+
+            if three_days_ago == '':
+                continue
+
+            ref_directory = 'reference_'+three_days_ago
+            if not os.path.exists(ref_directory):
+                insert_log(LOG_FILE, ref_directory + ' does not exist')
+                continue
+
+            JPEG_directory = os.path.join(ref_directory, 'JPEGImages')
+            if not os.path.exists(JPEG_directory):
+                insert_log(LOG_FILE, JPEG_directory + ' does not exist')
+                continue
+
+            source_JPEG_file = os.path.join(JPEG_directory, id+'.jpeg')
+            if not os.path.exists(source_JPEG_file):
+                insert_log(LOG_FILE, source_JPEG_file + ' does not exist')
+                continue
+
+            insert_log(LOG_FILE, source_JPEG_file + ' found')
+            shutil.copy(source_JPEG_file, IMAGE_directory)
+
+            JPEG_file = os.path.join(IMAGE_directory, id+'.jpeg')
+
+            ##create XML for each jpeg file
+            # < annotation >
+            #   < folder > data_image < / folder >
+            #   < filename > sh600055.jpeg < / filename >
+            #   < path > /home/davidcui/PycharmProjects/test01/data_image/sh600055.jpeg < / path >
+            #   < source >
+            #       < database > Unknown < / database >
+            #   < / source >
+            #   < size >
+            #       < width > 545 < / width >
+            #       < height > 300 < / height >
+            #       < depth > 3 < / depth >
+            #   < / size >
+            #   < segmented > 0 < / segmented >
+            #   < object >
+            #       < name > up < / name >
+            #       < pose > Unspecified < / pose >
+            #       < truncated > 0 < / truncated >
+            #       < difficult > 0 < / difficult >
+            #       < bndbox >
+            #           < xmin > 49 < / xmin >
+            #           < ymin > 16 < / ymin >
+            #           < xmax > 513 < / xmax >
+            #           < ymax > 284 < / ymax >
+            #       < / bndbox >
+            #   < / object >
+            # < / annotation >
+            ##
+
+
+            import xml.dom.minidom
+
+            doc = xml.dom.minidom.Document()
+            # root node
+            root = doc.createElement('annotation')
+            doc.appendChild(root)
+
+            folder = doc.createElement('folder')
+            folder.appendChild(doc.createTextNode(IMAGE_directory))
+            root.appendChild(folder)
+
+            filename = doc.createElement('filename')
+            filename.appendChild(doc.createTextNode(os.path.basename(JPEG_file)))
+            root.appendChild(filename)
+
+            path = doc.createElement('path')
+            path.appendChild(doc.createTextNode(os.path.realpath(JPEG_file)))
+            root.appendChild(path)
+
+            source = doc.createElement('source')
+            database = doc.createElement('database')
+            database.appendChild(doc.createTextNode('Unknown'))
+            source.appendChild(database)
+            root.appendChild(source)
+
+            size = doc.createElement('size')
+            width = doc.createElement('width')
+            width.appendChild(doc.createTextNode('545'))
+            height = doc.createElement('height')
+            height.appendChild(doc.createTextNode('300'))
+            depth = doc.createElement('depth')
+            depth.appendChild(doc.createTextNode('3'))
+            size.appendChild(width)
+            size.appendChild(height)
+            size.appendChild(depth)
+            root.appendChild(size)
+
+            segmented = doc.createElement('segmented')
+            segmented.appendChild(doc.createTextNode('0'))
+            root.appendChild(segmented)
+
+            object = doc.createElement('object')
+            name = doc.createElement('name')
+            name.appendChild(doc.createTextNode(trend))
+            pose = doc.createElement('pose')
+            pose.appendChild(doc.createTextNode('Unspecified'))
+            truncated = doc.createElement('truncated')
+            truncated.appendChild(doc.createTextNode('0'))
+            difficult = doc.createElement('difficult')
+            difficult.appendChild(doc.createTextNode('0'))
+            bndbox = doc.createElement('bndbox')
+            xmin = doc.createElement('xmin')
+            xmin.appendChild(doc.createTextNode('50'))
+            bndbox.appendChild(xmin)
+            ymin = doc.createElement('ymin')
+            ymin.appendChild(doc.createTextNode('17'))
+            bndbox.appendChild(ymin)
+            xmax = doc.createElement('xmax')
+            xmax.appendChild(doc.createTextNode('532'))
+            bndbox.appendChild(xmax)
+            ymax = doc.createElement('ymax')
+            ymax.appendChild(doc.createTextNode('287'))
+            bndbox.appendChild(ymax)
+
+            object.appendChild(name)
+            object.appendChild(pose)
+            object.appendChild(truncated)
+            object.appendChild(difficult)
+            object.appendChild(bndbox)
+            root.appendChild(object)
+
+            xml_fp = open(os.path.join(annotation_directory, id + '.xml'), 'wb')
+            doc.writexml(xml_fp, indent='\t', addindent='\t', newl='\n', encoding="utf-8")
+            # print('Saved file '+ os.path.realpath(xml_fp))
+            print('Saved file ' + id + '.xml')
+
+            examples_fp = os.path.join(traing_data_dir, 'examples.txt')
+            examples_file = open(examples_fp, 'w')
+            examples_file.write(id + ' 1\n')
+
+
+    insert_log(LOG_FILE, 'Finished generating annotations')
+
 if __name__ == "__main__":
     init()
     generate_reference_xls()
