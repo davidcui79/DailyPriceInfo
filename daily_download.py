@@ -45,7 +45,8 @@ def init():
     if not os.path.exists(REFERENCE_DIR):
         os.mkdir(REFERENCE_DIR)
 
-    log_fp = os.path.join(REFERENCE_DIR, 'log.txt')
+    timestamp = time.strftime('%Y-%m-%d_%H-%M-%S', time.localtime(time.time()))
+    log_fp = os.path.join(REFERENCE_DIR, 'log'+timestamp+'.txt')
     # create log file, overwrite mode
     global LOG_FILE
     LOG_FILE = open(log_fp, 'wb')
@@ -281,13 +282,16 @@ def generate_annotations():
     IMAGE_directory = os.path.join(traing_data_dir, 'JPEGImages')
     if not os.path.exists(IMAGE_directory):
         os.mkdir(IMAGE_directory)
-    insert_log(LOG_FILE, 'create dir ' + IMAGE_directory)
+        insert_log(LOG_FILE, 'create dir ' + IMAGE_directory)
+    else:
+        insert_log(LOG_FILE, 'dir ' + IMAGE_directory + ' already exists')
 
     annotation_directory = os.path.join(traing_data_dir, 'annotations')
     if not os.path.exists(annotation_directory):
         os.mkdir(annotation_directory)
-    insert_log(LOG_FILE, 'create dir ' + annotation_directory)
-
+        insert_log(LOG_FILE, 'create dir ' + annotation_directory)
+    else:
+        insert_log(LOG_FILE, 'dir ' + annotation_directory + ' already exist')
 
     insert_log(LOG_FILE, 'open ' + excel_fp)
     read_workbook = xlrd.open_workbook(excel_fp)
@@ -295,7 +299,10 @@ def generate_annotations():
     rows = []
     for i in range(0, read_worksheet.nrows):
         rows.append(read_worksheet.row_values(i))
-    insert_log(LOG_FILE, 'read '+ format(len(rows),"") + 'rows from xls file')
+    insert_log(LOG_FILE, 'read '+ format(len(rows),"") + ' rows from xls file')
+
+    examples_fp = os.path.join(traing_data_dir, 'examples.txt')
+    examples_file = open(examples_fp, 'w')
 
     for i in range(len(rows)):
         trend = rows[i][1]
@@ -440,12 +447,12 @@ def generate_annotations():
             xml_fp = open(os.path.join(annotation_directory, id + '.xml'), 'wb')
             doc.writexml(xml_fp, indent='\t', addindent='\t', newl='\n', encoding="utf-8")
             # print('Saved file '+ os.path.realpath(xml_fp))
-            print('Saved file ' + id + '.xml')
+            insert_log(LOG_FILE, 'Saved file ' + id + '.xml for trend ' + trend)
 
-            examples_fp = os.path.join(traing_data_dir, 'examples.txt')
-            examples_file = open(examples_fp, 'w')
             examples_file.write(id + ' 1\n')
+            insert_log(LOG_FILE, id + ' written to file ' + examples_fp)
 
+    examples_file.close()
 
     insert_log(LOG_FILE, 'Finished generating annotations')
 
