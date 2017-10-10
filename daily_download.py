@@ -33,7 +33,7 @@ def comp(x, y):
 
 
 date = time.strftime('%Y-%m-%d',time.localtime(time.time()))
-REFERENCE_DIR = 'reference_' + date
+REFERENCE_DIR = os.path.join(utils.get_path_to_data_dir(), 'reference_' + date)
 
 LOG_FILE = ''
 #
@@ -279,9 +279,13 @@ def generate_annotations():
     insert_log(LOG_FILE, 'create dir ' + traing_data_dir)
 
     IMAGE_directory = os.path.join(traing_data_dir, 'JPEGImages')
+    if not os.path.exists(IMAGE_directory):
+        os.mkdir(IMAGE_directory)
     insert_log(LOG_FILE, 'create dir ' + IMAGE_directory)
 
     annotation_directory = os.path.join(traing_data_dir, 'annotations')
+    if not os.path.exists(annotation_directory):
+        os.mkdir(annotation_directory)
     insert_log(LOG_FILE, 'create dir ' + annotation_directory)
 
 
@@ -299,22 +303,32 @@ def generate_annotations():
             id = rows[i][0]
             three_days_ago = rows[i][3]
 
+            # insert prefix
+            if ((id.find('300') == 0 or id.find('00') == 0)):
+                id = 'sz' + id
+            elif (id.find('60') == 0):
+                id = 'sh' + id
+            else:
+                LOG_ID_NOT_HANDLED = 'Don\'t know how to handle ID:' + id + ', skip and continue'
+                insert_log(LOG_FILE, LOG_ID_NOT_HANDLED)
+                continue
+
             if three_days_ago == '':
                 continue
 
-            ref_directory = 'reference_'+three_days_ago
+            ref_directory = os.path.join(utils.get_path_to_data_dir(), 'reference_'+three_days_ago)
             if not os.path.exists(ref_directory):
-                insert_log(LOG_FILE, ref_directory + ' does not exist')
+                insert_log(LOG_FILE, ref_directory + ' does not exist for id ' + format(id, ""))
                 continue
 
-            JPEG_directory = os.path.join(ref_directory, 'JPEGImages')
-            if not os.path.exists(JPEG_directory):
-                insert_log(LOG_FILE, JPEG_directory + ' does not exist')
+            source_JPEG_dir = os.path.join(ref_directory, 'JPEGImages')
+            if not os.path.exists(source_JPEG_dir):
+                insert_log(LOG_FILE, source_JPEG_dir + ' does not exist for id ' + format(id, ""))
                 continue
 
-            source_JPEG_file = os.path.join(JPEG_directory, id+'.jpeg')
+            source_JPEG_file = os.path.join(source_JPEG_dir, id+'.jpeg')
             if not os.path.exists(source_JPEG_file):
-                insert_log(LOG_FILE, source_JPEG_file + ' does not exist')
+                insert_log(LOG_FILE, source_JPEG_file + ' does not exist for id ' + format(id, ""))
                 continue
 
             insert_log(LOG_FILE, source_JPEG_file + ' found')
@@ -438,5 +452,6 @@ def generate_annotations():
 if __name__ == "__main__":
     init()
     generate_reference_xls()
+    generate_annotations()
     download_daily_image()
     LOG_FILE.close()
