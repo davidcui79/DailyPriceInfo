@@ -1,4 +1,5 @@
 import time
+import os
 
 def insert_log(fp, string, stdout=True):
 
@@ -37,3 +38,12 @@ def first_date_of_previous_month(year, month):
 
 def this_year():
     return time.strftime('%Y', time.localtime(time.time()))
+
+def get_user_home():
+    return os.path.expandvars('$HOME')
+
+def get_path_to_data_dir():
+    path = os.path.join(get_user_home(), 'DailyPriceInfo_data')
+    if not os.path.exists(path):
+        os.mkdir(path)
+    return path
