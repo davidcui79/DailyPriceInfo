@@ -97,8 +97,8 @@ def generate_reference_xls():
             continue
 
         #test code
-        #if count > 50:
-        #     break
+        if count > 20:
+             break
 
         month = utils.last_month()
         try:
@@ -304,6 +304,17 @@ def generate_annotations():
     examples_fp = os.path.join(traing_data_dir, 'examples.txt')
     examples_file = open(examples_fp, 'w')
 
+    model_bias_fp = os.path.join(traing_data_dir, 'model_bias_'+ date+'.xls')
+    if os.path.exists(model_bias_fp):
+        os.remove(model_bias_fp)
+        insert_log(LOG_FILE, 'delete file ' + model_bias_fp)
+
+    model_bias_workbook = xlwt.Workbook()
+    model_bias_worksheet = model_bias_workbook.add_sheet('bias')
+
+    #cursor of model_bias_worksheet
+    model_bias_worksheet_cursor = 0
+
     for i in range(len(rows)):
         trend = rows[i][1]
         if (trend == 'up') or (trend == 'down'):
@@ -452,13 +463,22 @@ def generate_annotations():
             examples_file.write(id + ' 1\n')
             insert_log(LOG_FILE, id + ' written to file ' + examples_fp)
 
+            #[id, date, trend, weight]
+            model_bias_worksheet.write(model_bias_worksheet_cursor, 0, id)
+            model_bias_worksheet.write(model_bias_worksheet_cursor, 1, date)
+            model_bias_worksheet.write(model_bias_worksheet_cursor, 2, trend)
+            model_bias_worksheet.write(model_bias_worksheet_cursor, 3, 1)
+            insert_log(LOG_FILE, 'insert row '+ format(model_bias_worksheet_cursor,"") +' [' + id + ',' + date + ','+ trend + ',' + '1] to ' + model_bias_fp)
+            model_bias_worksheet_cursor += 1
+
     examples_file.close()
+    model_bias_workbook.save(model_bias_fp)
 
     insert_log(LOG_FILE, 'Finished generating annotations')
 
 if __name__ == "__main__":
     init()
-    generate_reference_xls()
-    generate_annotations()
+    #generate_reference_xls()
+    #generate_annotations()
     download_daily_image()
     LOG_FILE.close()
