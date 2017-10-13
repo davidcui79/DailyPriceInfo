@@ -269,7 +269,7 @@ def download_daily_image():
             print (info[0], ':', info[1])
             continue
 
-        insert_log(LOG_FILE, 'Finished downloading jpeg files')
+    insert_log(LOG_FILE, 'Finished downloading jpeg files')
 
 def generate_annotations():
     excel_fp = os.path.join(REFERENCE_DIR, 'reference_' + date + '.xls')
